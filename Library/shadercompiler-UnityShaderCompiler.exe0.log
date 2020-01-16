@@ -1,2 +1,46 @@
 Base path: 'C:/Program Files/Unity/2019.2.17f1/Editor/Data', plugins path 'C:/Program Files/Unity/2019.2.17f1/Editor/Data/PlaybackEngines'
 Cmd: initializeCompiler
+Cmd: preprocessCompute
+  insize=4321 outsize=4320 ok=1
+Cmd: preprocessCompute
+  insize=4321 outsize=4320 ok=1
+Cmd: preprocessCompute
+  insize=4526 outsize=4525 ok=1
+Cmd: preprocessCompute
+  insize=4526 outsize=4525 ok=1
+Cmd: preprocessCompute
+  insize=4343 outsize=4342 ok=1
+Cmd: compileComputeKernel
+  error: 2 plat 4 at RayTracerShader.compute(153): undeclared identifier '_Pixel'
+  api=4 insize=4342 outsize=0 ok=0
+Cmd: preprocessCompute
+  insize=4323 outsize=4322 ok=1
+Cmd: compileComputeKernel
+  api=4 insize=4322 outsize=5514 ok=1
+Cmd: preprocessCompute
+  insize=5941 outsize=5940 ok=1
+Cmd: compileComputeKernel
+  error: 2 plat 4 at RayTracerShader.compute(17): unrecognized identifier 'Ray'
+  api=4 insize=5940 outsize=0 ok=0
+Cmd: preprocessCompute
+  insize=5939 outsize=5938 ok=1
+Cmd: preprocessCompute
+  insize=5943 outsize=5942 ok=1
+Cmd: compileComputeKernel
+  api=4 insize=5942 outsize=7618 ok=1
+Cmd: preprocessCompute
+  insize=6138 outsize=6137 ok=1
+Cmd: compileComputeKernel
+  api=4 insize=6137 outsize=7618 ok=1
+Cmd: preprocessCompute
+  insize=6579 outsize=6578 ok=1
+Cmd: compileComputeKernel
+  api=4 insize=6578 outsize=10839 ok=1
+Cmd: compileSnippet
+  api=4 type=0 insize=1596 outsize=1894 kw=UNITY_PASS_FORWARDBASE DIRECTIONAL LIGHTPROBE_SH pd=UNITY_ENABLE_REFLECTION_BUFFERS UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS UNITY_PBS_USE_BRDF1 UNITY_SPECCUBE_BOX_PROJECTION UNITY_SPECCUBE_BLENDING UNITY_ENABLE_DETAIL_NORMALMAP SHADER_API_DESKTOP UNITY_COLORSPACE_GAMMA UNITY_LIGHT_PROBE_PROXY_VOLUME UNITY_LIGHTMAP_FULL_HDR ok=1
+Cmd: compileSnippet
+  api=4 type=1 insize=1596 outsize=6814 kw=UNITY_PASS_FORWARDBASE DIRECTIONAL LIGHTPROBE_SH pd=UNITY_ENABLE_REFLECTION_BUFFERS UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS UNITY_PBS_USE_BRDF1 UNITY_SPECCUBE_BOX_PROJECTION UNITY_SPECCUBE_BLENDING UNITY_ENABLE_DETAIL_NORMALMAP SHADER_API_DESKTOP UNITY_COLORSPACE_GAMMA UNITY_LIGHT_PROBE_PROXY_VOLUME UNITY_LIGHTMAP_FULL_HDR ok=1
+Cmd: compileSnippet
+  api=4 type=0 insize=1454 outsize=1690 kw=UNITY_PASS_FORWARDADD DIRECTIONAL pd=UNITY_ENABLE_REFLECTION_BUFFERS UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS UNITY_PBS_USE_BRDF1 UNITY_SPECCUBE_BOX_PROJECTION UNITY_SPECCUBE_BLENDING UNITY_ENABLE_DETAIL_NORMALMAP SHADER_API_DESKTOP UNITY_COLORSPACE_GAMMA UNITY_LIGHT_PROBE_PROXY_VOLUME UNITY_LIGHTMAP_FULL_HDR ok=1
+Cmd: compileSnippet
+  api=4 type=1 insize=1454 outsize=3378 kw=UNITY_PASS_FORWARDADD DIRECTIONAL pd=UNITY_ENABLE_REFLECTION_BUFFERS UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS UNITY_PBS_USE_BRDF1 UNITY_SPECCUBE_BOX_PROJECTION UNITY_SPECCUBE_BLENDING UNITY_ENABLE_DETAIL_NORMALMAP SHADER_API_DESKTOP UNITY_COLORSPACE_GAMMA UNITY_LIGHT_PROBE_PROXY_VOLUME UNITY_LIGHTMAP_FULL_HDR ok=1
