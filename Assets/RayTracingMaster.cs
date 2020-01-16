@@ -12,8 +12,10 @@ public class RayTracingMaster : MonoBehaviour
     private Camera _camera;
 
     public Vector2 SphereRadius = new Vector2(3.0f, 8.0f);
+    public float SphereMaxRadius = 5;
+    public float SphereMinRadius = 1;
     public uint SpheresMax = 100;
-    public float SpherePlacementRadius = 100.0f;
+    public float SpherePlacementRadius = 1.0f;
     private ComputeBuffer _sphereBuffer;
 
     public void OnEnable()
@@ -29,34 +31,33 @@ public class RayTracingMaster : MonoBehaviour
 
     private void SetUpScene()
     {
-        Random.InitState(0);
+        Random.InitState(2);
         List<Sphere> spheres = new List<Sphere>();
 
-        // Add a number of random spheres
         for (int i = 0; i < SpheresMax; i++)
         {
             Sphere sphere = new Sphere();
 
-            // Radius and radius
-            sphere.radius = SphereRadius.x + Random.value * (SphereRadius.y - SphereRadius.x);
+            sphere.radius = Random.Range(SphereMinRadius, SphereMaxRadius);
             Vector2 randomPos = Random.insideUnitCircle * SpherePlacementRadius;
             sphere.position = new Vector3(randomPos.x, sphere.radius, randomPos.y);
 
-            // Reject spheres that are intersecting others
             foreach (Sphere other in spheres)
             {
-                float minDist = sphere.radius + other.radius;
-                if (Vector3.SqrMagnitude(sphere.position - other.position) < minDist * minDist)
-                    goto SkipSphere;
+                while(SpheresColliding(sphere, other) && sphere.radius > SphereMinRadius)
+                {
+                    sphere.radius -= .1f;
+                    sphere.position.y = sphere.radius;
+                }
+                if(SpheresColliding(sphere, other))
+                   goto SkipSphere;
             }
 
-            // Albedo and specular color
             Color color = Random.ColorHSV();
             bool metal = Random.value < 0.5f;
             sphere.albedo = metal ? Vector3.zero : new Vector3(color.r, color.g, color.b);
             sphere.specular = metal ? new Vector3(color.r, color.g, color.b) : Vector3.one * 0.04f;
 
-            // Add the sphere to the list
             spheres.Add(sphere);
 
         SkipSphere:
@@ -139,4 +140,10 @@ public class RayTracingMaster : MonoBehaviour
         public Vector3 albedo;
         public Vector3 specular;
     };
+
+    private bool SpheresColliding(Sphere sphere1, Sphere sphere2)
+    {
+        float minDist = sphere1.radius + sphere2.radius;
+        return (Vector3.SqrMagnitude(sphere1.position - sphere2.position) < minDist * minDist);
+    }
 }
