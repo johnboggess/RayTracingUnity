@@ -1,5 +1,5 @@
 Base path: 'C:/Program Files/Unity/2019.2.17f1/Editor/Data', plugins path 'C:/Program Files/Unity/2019.2.17f1/Editor/Data/PlaybackEngines'
 Cmd: initializeCompiler
 Cmd: compileComputeKernel
-  error: 2 plat 4 at RayTracerShader.compute(12): syntax error: unexpected token 'Sphere'
-  api=4 insize=4356 outsize=0 ok=0
+  error: 2 plat 4 at RayTracerShader.compute(12): syntax error: unexpected token '*'
+  api=4 insize=6590 outsize=0 ok=0

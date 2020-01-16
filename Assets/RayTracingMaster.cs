@@ -5,9 +5,6 @@ using UnityEngine;
 
 public class RayTracingMaster : MonoBehaviour
 {
-    private static bool _meshObjectsNeedRebuilding = true;
-    private static List<RayTracingObject> _rayTracingObjects = new List<RayTracingObject>();
-
     public ComputeShader RayTracingShader;
     public Texture SkyboxTexture;
     public Light DirectionalLight;
@@ -17,20 +14,23 @@ public class RayTracingMaster : MonoBehaviour
     public float SphereMinRadius = 1;
     public uint SpheresMax = 100;
     public float SpherePlacementRadius = 1.0f;
-
+    
     private RenderTexture _target;
     private RenderTexture _converged;
     private Camera _camera;
 
     private ComputeBuffer _sphereBuffer;
 
-    private static List<MeshObject> _meshObjects = new List<MeshObject>();
+    private static bool _meshObjectsNeedRebuilding = false;
+    private static List<RayTracingObject> _rayTracingObjects = new List<RayTracingObject>();
+    private static Dictionary<RayTracingObject, MeshObject> _rayTracingObjectToMesh = new Dictionary<RayTracingObject, MeshObject>();
+    
     private static List<Vector3> _vertices = new List<Vector3>();
     private static List<int> _indices = new List<int>();
     private ComputeBuffer _meshObjectBuffer;
     private ComputeBuffer _vertexBuffer;
     private ComputeBuffer _indexBuffer;
-
+    
     public void OnEnable()
     {
         SetUpScene();
@@ -105,10 +105,10 @@ public class RayTracingMaster : MonoBehaviour
         Vector3 l = DirectionalLight.transform.forward;
         RayTracingShader.SetVector("_DirectionalLight", new Vector4(l.x, l.y, l.z, DirectionalLight.intensity));
 
-        RayTracingShader.SetBuffer(0, "_Spheres", _sphereBuffer);
-        RayTracingShader.SetBuffer(0, "_MeshObjects", _meshObjectBuffer);
-        RayTracingShader.SetBuffer(0, "_Vertices", _vertexBuffer);
-        RayTracingShader.SetBuffer(0, "_Indices", _indexBuffer);
+        SetComputeBuffer("_Spheres", _sphereBuffer);
+        SetComputeBuffer("_MeshObjects", _meshObjectBuffer);
+        SetComputeBuffer("_Vertices", _vertexBuffer);
+        SetComputeBuffer("_Indices", _indexBuffer);
 
         RayTracingShader.SetMatrix("_CameraToWorld", _camera.cameraToWorldMatrix);
         RayTracingShader.SetMatrix("_CameraInverseProjection", _camera.projectionMatrix.inverse);
@@ -117,6 +117,7 @@ public class RayTracingMaster : MonoBehaviour
     private void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
         RebuildMeshObjectBuffers();
+        RepositionMeshObjects();
         SetShaderParameters();
         Render(destination);
     }
@@ -193,6 +194,17 @@ public class RayTracingMaster : MonoBehaviour
         public int indices_count;
     }
 
+    private void RepositionMeshObjects()
+    {
+        foreach (RayTracingObject obj in _rayTracingObjects)
+        {
+            MeshObject meshObject = _rayTracingObjectToMesh[obj];
+            meshObject.localToWorldMatrix = obj.transform.localToWorldMatrix;
+            _rayTracingObjectToMesh[obj] = meshObject;
+        }
+        CreateComputeBuffer(ref _meshObjectBuffer, _rayTracingObjectToMesh.Values.ToList(), 72);
+    }
+
     private void RebuildMeshObjectBuffers()
     {
         if (!_meshObjectsNeedRebuilding)
@@ -201,7 +213,7 @@ public class RayTracingMaster : MonoBehaviour
         }
         _meshObjectsNeedRebuilding = false;
         // Clear all lists
-        _meshObjects.Clear();
+        _rayTracingObjectToMesh.Clear();
         _vertices.Clear();
         _indices.Clear();
         // Loop over all objects and gather their data
@@ -217,14 +229,14 @@ public class RayTracingMaster : MonoBehaviour
             var indices = mesh.GetIndices(0);
             _indices.AddRange(indices.Select(index => index + firstVertex));
             // Add the object itself
-            _meshObjects.Add(new MeshObject()
+            _rayTracingObjectToMesh.Add(obj, new MeshObject()
             {
                 localToWorldMatrix = obj.transform.localToWorldMatrix,
                 indices_offset = firstIndex,
-                indices_count = indices.Length
+                indices_count = indices.Length,
             });
         }
-        CreateComputeBuffer(ref _meshObjectBuffer, _meshObjects, 72);
+        CreateComputeBuffer(ref _meshObjectBuffer, _rayTracingObjectToMesh.Values.ToList(), 72);
         CreateComputeBuffer(ref _vertexBuffer, _vertices, 12);
         CreateComputeBuffer(ref _indexBuffer, _indices, 4);
     }
