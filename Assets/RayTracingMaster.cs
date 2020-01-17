@@ -16,15 +16,16 @@ public class RayTracingMaster : MonoBehaviour
     public float SpherePlacementRadius = 1.0f;
     
     private RenderTexture _target;
-    private RenderTexture _converged;
     private Camera _camera;
 
     private ComputeBuffer _sphereBuffer;
 
     private static bool _meshObjectsNeedRebuilding = false;
-    private static List<RayTracingObject> _rayTracingObjects = new List<RayTracingObject>();
+    private static List<RayTracingObject> _rayTracingMeshs = new List<RayTracingObject>();
+    private static List<RayTracingSphere> _rayTracingSpheres = new List<RayTracingSphere>();
     private static Dictionary<RayTracingObject, MeshObject> _rayTracingObjectToMesh = new Dictionary<RayTracingObject, MeshObject>();
-    
+    private static Dictionary<RayTracingSphere, Sphere> _rayTracingObjectToSphere = new Dictionary<RayTracingSphere, Sphere>();
+
     private static List<Vector3> _vertices = new List<Vector3>();
     private static List<int> _indices = new List<int>();
     private ComputeBuffer _meshObjectBuffer;
@@ -54,41 +55,40 @@ public class RayTracingMaster : MonoBehaviour
     private void SetUpScene()
     {
         Random.InitState(3);
-        List<Sphere> spheres = new List<Sphere>();
 
-        for (int i = 0; i < SpheresMax; i++)
+        for (int i = 0; i < 1; i++)
         {
-            Sphere sphere = new Sphere();
-
-            sphere.radius = Random.Range(SphereMinRadius, SphereMaxRadius);
             Vector2 randomPos = Random.insideUnitCircle * SpherePlacementRadius;
-            sphere.position = new Vector3(randomPos.x, sphere.radius, randomPos.y);
-
-            foreach (Sphere other in spheres)
-            {
-                while(SpheresColliding(sphere, other) && sphere.radius > SphereMinRadius)
-                {
-                    sphere.radius -= .1f;
-                    sphere.position.y = sphere.radius;
-                }
-                if(SpheresColliding(sphere, other))
-                   goto SkipSphere;
-            }
-
-            Color color = Random.ColorHSV();
-            bool metal = Random.value < 0.5f;
-            sphere.albedo = metal ? Vector3.zero : new Vector3(color.r, color.g, color.b);
-            sphere.specular = metal ? new Vector3(color.r, color.g, color.b) : Vector3.one * 0.04f;
-
-            spheres.Add(sphere);
-
-        SkipSphere:
-            continue;
+            CreateRandomRayTracingSphere().transform.position = new Vector3(randomPos.x, 10, randomPos.y);
         }
+    }
 
-        // Assign to compute buffer
-        _sphereBuffer = new ComputeBuffer(spheres.Count, 40);
-        _sphereBuffer.SetData(spheres);
+    private GameObject CreateRandomRayTracingCube()
+    {
+        Color color = Random.ColorHSV();
+        bool metal = Random.value < 0.5f;
+        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        cube.AddComponent<RayTracingCube>();
+        cube.AddComponent<Rigidbody>();
+        cube.GetComponent<RayTracingCube>().Albedo = metal ? Vector3.zero : new Vector3(color.r, color.g, color.b);
+        cube.GetComponent<RayTracingCube>().Specular = new Vector3(color.a, color.g, color.b);
+
+        return cube;
+    }
+
+    private GameObject CreateRandomRayTracingSphere()
+    {
+        Color color = Random.ColorHSV();
+        bool metal = Random.value < 0.5f;
+        GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        sphere.transform.localScale = new Vector3(5, 5, 5);
+        sphere.AddComponent<RayTracingSphere>();
+        sphere.AddComponent<Rigidbody>();
+        sphere.GetComponent<RayTracingSphere>().Radius = sphere.transform.localScale.x/2f;
+        sphere.GetComponent<RayTracingSphere>().Albedo = metal ? Vector3.zero : new Vector3(color.r, color.g, color.b);
+        sphere.GetComponent<RayTracingSphere>().Specular = new Vector3(color.a, color.g, color.b);
+
+        return sphere;
     }
 
     public void Awake()
@@ -131,8 +131,7 @@ public class RayTracingMaster : MonoBehaviour
         int threadGroupsY = Mathf.CeilToInt(Screen.height / 8f);
         RayTracingShader.Dispatch(0, threadGroupsX, threadGroupsY, 1);
 
-        Graphics.Blit(_target, _converged);
-        Graphics.Blit(_converged, destination);
+        Graphics.Blit(_target, destination);
     }
 
     private void InitRenderTexture()
@@ -148,29 +147,34 @@ public class RayTracingMaster : MonoBehaviour
             _target.enableRandomWrite = true;
             _target.Create();
         }
-
-        if (_converged == null || _converged.width != Screen.width || _converged.height != Screen.height)
-        {
-            if (_converged != null)
-            {
-                _converged.Release();
-            }
-
-            _converged = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
-            _converged.enableRandomWrite = true;
-            _converged.Create();
-        }
     }
 
     public static void RegisterObject(RayTracingObject obj)
     {
-        _rayTracingObjects.Add(obj);
-        _meshObjectsNeedRebuilding = true;
+        if (!(obj is RayTracingSphere))
+        {
+            _rayTracingMeshs.Add(obj);
+            _meshObjectsNeedRebuilding = true;
+        }
+        else
+        {
+            _rayTracingSpheres.Add((RayTracingSphere)obj);
+            Sphere sphere = new Sphere();
+            _rayTracingObjectToSphere.Add((RayTracingSphere)obj, sphere);
+        }
     }
     public static void UnregisterObject(RayTracingObject obj)
     {
-        _rayTracingObjects.Remove(obj);
-        _meshObjectsNeedRebuilding = true;
+        if (!(obj is RayTracingSphere))
+        {
+            _rayTracingMeshs.Remove(obj);
+            _meshObjectsNeedRebuilding = true;
+        }
+        else
+        {
+            _rayTracingSpheres.Remove((RayTracingSphere)obj);
+            _rayTracingObjectToSphere.Remove((RayTracingSphere)obj);
+        }
     }
     
     struct Sphere
@@ -192,17 +196,32 @@ public class RayTracingMaster : MonoBehaviour
         public Matrix4x4 localToWorldMatrix;
         public int indices_offset;
         public int indices_count;
+        public Vector3 albedo;
+        public Vector3 specular;
     }
+    private static int SizeOfMeshObject = 96;
 
     private void RepositionMeshObjects()
     {
-        foreach (RayTracingObject obj in _rayTracingObjects)
+        foreach (RayTracingObject obj in _rayTracingMeshs)
         {
             MeshObject meshObject = _rayTracingObjectToMesh[obj];
             meshObject.localToWorldMatrix = obj.transform.localToWorldMatrix;
             _rayTracingObjectToMesh[obj] = meshObject;
         }
-        CreateComputeBuffer(ref _meshObjectBuffer, _rayTracingObjectToMesh.Values.ToList(), 72);
+        CreateComputeBuffer(ref _meshObjectBuffer, _rayTracingObjectToMesh.Values.ToList(), SizeOfMeshObject);
+
+        foreach(RayTracingSphere obj in _rayTracingSpheres)
+        {
+            Sphere sphere = _rayTracingObjectToSphere[obj];
+            sphere.position = obj.transform.position;
+            sphere.radius = obj.Radius;
+            sphere.albedo = obj.Albedo;
+            sphere.specular = obj.Specular;
+            _rayTracingObjectToSphere[obj] = sphere;
+        }
+        CreateComputeBuffer(ref _sphereBuffer, _rayTracingObjectToSphere.Values.ToList(), 40);
+
     }
 
     private void RebuildMeshObjectBuffers()
@@ -217,7 +236,7 @@ public class RayTracingMaster : MonoBehaviour
         _vertices.Clear();
         _indices.Clear();
         // Loop over all objects and gather their data
-        foreach (RayTracingObject obj in _rayTracingObjects)
+        foreach (RayTracingObject obj in _rayTracingMeshs)
         {
             Mesh mesh = obj.GetComponent<MeshFilter>().sharedMesh;
             // Add vertex data
@@ -234,9 +253,12 @@ public class RayTracingMaster : MonoBehaviour
                 localToWorldMatrix = obj.transform.localToWorldMatrix,
                 indices_offset = firstIndex,
                 indices_count = indices.Length,
+                albedo = obj.Albedo,
+                specular = obj.Specular
             });
         }
-        CreateComputeBuffer(ref _meshObjectBuffer, _rayTracingObjectToMesh.Values.ToList(), 72);
+
+        CreateComputeBuffer(ref _meshObjectBuffer, _rayTracingObjectToMesh.Values.ToList(), SizeOfMeshObject);
         CreateComputeBuffer(ref _vertexBuffer, _vertices, 12);
         CreateComputeBuffer(ref _indexBuffer, _indices, 4);
     }

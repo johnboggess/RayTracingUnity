@@ -43,6 +43,8 @@ struct MeshObject
 	float4x4 localToWorldMatrix;
 	int indices_offset;
 	int indices_count;
+	float3 albedo;
+	float3 specular;
 }; 
 StructuredBuffer<MeshObject> _MeshObjects;
 StructuredBuffer<float3> _Vertices;
@@ -139,8 +141,8 @@ void IntersectMeshObject(Ray ray, inout RayHit bestHit, MeshObject meshObject)
 				bestHit.distance = t;
 				bestHit.position = ray.origin + t * ray.direction;
 				bestHit.normal = normalize(cross(v1 - v0, v2 - v0));
-				bestHit.albedo = 0.0f;
-				bestHit.specular = 0.65f;
+				bestHit.albedo = meshObject.albedo;
+				bestHit.specular = meshObject.specular;
 			}
 		}
 	}
@@ -170,7 +172,7 @@ RayHit Trace(Ray ray)
 {
 
 	RayHit bestHit = CreateRayHit();
-	IntersectGroundPlane(ray, bestHit);
+	//IntersectGroundPlane(ray, bestHit);
 
 	uint count, stride;
 	_Spheres.GetDimensions(count, stride);

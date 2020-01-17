@@ -6,6 +6,9 @@ using UnityEngine;
 [RequireComponent(typeof(MeshFilter))]
 public class RayTracingObject : MonoBehaviour
 {
+    public Vector3 Albedo = Vector3.zero;
+    public Vector3 Specular = Vector3.zero;
+
     private void OnEnable()
     {
         RayTracingMaster.RegisterObject(this);
